@@ -11,4 +11,8 @@ urlpatterns = [
         'movie/detail/<str:id>/', views.MovieDetailView.as_view(),
         name='movie_detail'
     ),
+    path(
+        'history/', views.HistoryView.as_view(),
+        name='history'
+    )
 ]
