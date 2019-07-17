@@ -1,5 +1,5 @@
 #IMDB
-Imdb-based service written in Django/Python.
+Imdb-based service written in Django/Python using onem-py SDK.
 
 ### Quickstart
 

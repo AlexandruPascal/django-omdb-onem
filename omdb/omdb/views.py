@@ -32,7 +32,8 @@ class View(_View):
         return user
 
     def to_response(self, menu_or_form):
-        return HttpResponse(menu_or_form.as_json(),
+        response = onem.Response(menu_or_form, self.request.GET['corr_id'])
+        return HttpResponse(response.as_json(),
                             content_type='application/json')
 
 

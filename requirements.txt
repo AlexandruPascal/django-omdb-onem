@@ -1,4 +1,4 @@
 Django==2.2.3
 PyJWT==1.7.1
-onem-py==1.2
+onem-py==1.3
 requests==2.22.0
