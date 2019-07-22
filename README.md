@@ -16,3 +16,7 @@ Works with Python3. Preferably to work in a virtual environment, use [virtualenv
 Register the app on the ONEm developer portal (https://developer-portal-poc.onem.zone/);
 Set the callback URL to the forwarding address obtained from ngrok's output;
 Go to https://poc.onem.zone/ and send the registered name with # in front
+
+### Deploy to Heroku
+
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
