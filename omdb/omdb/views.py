@@ -9,7 +9,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.urls import reverse
 from django.views.generic import View as _View
-from django.shortcuts import get_object_or_404
 
 from .models import History
 from .helpers import OmdbMixin
@@ -32,7 +31,8 @@ class View(_View):
         return user
 
     def to_response(self, menu_or_form):
-        response = onem.Response(menu_or_form, self.request.GET['corr_id'])
+        response = onem.Response(menu_or_form,
+                                 self.request.headers['X-Onem-Correlation-Id'])
         return HttpResponse(response.as_json(),
                             content_type='application/json')
 
@@ -64,7 +64,7 @@ class SearchWizardView(View, OmdbMixin):
                 name='keyword',
                 item_type=onem.forms.FormItemType.STRING,
                 label='Send keywords to search',
-                header='search', footer='Send keyword'
+                header='search', footer='send keyword'
             )
         ]
         return self.to_response(
@@ -80,9 +80,10 @@ class SearchWizardView(View, OmdbMixin):
         response = self.get_page_data(keyword)
         if response['Response'] == 'False':
             return self.to_response(onem.menus.Menu(
-                [onem.menus.MenuItem(label='No results', is_option=False)],
+                [onem.menus.MenuItem(label='No results', is_option=False,
+                                     url=reverse('home'))],
                 header='{keyword} SEARCH'.format(keyword=keyword.title()),
-                footer='Send BACK and search again'
+                footer='send BACK and search again'
             ))
 
         body = []
@@ -126,23 +127,27 @@ class MovieDetailView(View, OmdbMixin):
 
     def get(self, request, id):
         history = History.objects.all()
-        if not any([movie for movie in history if movie.omdb_id == id]):
+        movie_from_history = [movie for movie in history if movie.omdb_id == id]
+        if not movie_from_history:
             response = self.get_page_data(id)
             if response['Response'] == 'False':
                 return self.to_response(onem.menus.Menu(
                     [onem.menus.MenuItem(label='Please try again later',
                                          is_option=False)],
-                    header='INFO', footer='Send BACK'
+                    header='INFO', footer='send BACK'
                 ))
             omdb_id = response['imdbID']
             title = response['Title']
             year = response['Year']
             rate = response['Ratings'][0]['Value']
             plot = response['Plot']
+            history_create = History.objects.create(
+                user=self.get_user(), omdb_id=omdb_id, title=title, year=year,
+                rate=rate, plot=plot, datetime=datetime.datetime.now()
+            )
+            history_create.save()
         else:
-            movie_from_history = [
-                movie for movie in history if movie.omdb_id == id
-            ][0]
+            movie_from_history = movie_from_history[0]
             omdb_id = movie_from_history.omdb_id
             title = movie_from_history.title
             year = movie_from_history.year
@@ -151,16 +156,15 @@ class MovieDetailView(View, OmdbMixin):
 
         user = self.get_user()
         user_history = user.history_set.all()
-        if not any([movie for movie in user_history if movie.omdb_id == id]):
-            history_movie = History.objects.create(
+        movie_from_user = [movie for movie in user_history if movie.omdb_id == id]
+        if movie_from_history and not movie_from_user:
+            history_create = History.objects.create(
                 user=self.get_user(), omdb_id=omdb_id, title=title, year=year,
                 rate=rate, plot=plot, datetime=datetime.datetime.now()
             )
-            history_movie.save()
-        else:
-            movie_from_user = [
-                movie for movie in user_history if movie.omdb_id == id
-            ][0]
+            history_create.save()
+        elif movie_from_history and movie_from_user:
+            movie_from_user = movie_from_user[0]
             movie_from_user.datetime = datetime.datetime.now()
             movie_from_user.save()
 
@@ -177,7 +181,7 @@ class MovieDetailView(View, OmdbMixin):
                 header='Movie details', footer='send BACK')
         ]
         return self.to_response(onem.forms.Form(
-            body, url=reverse('search_wizard'), method='GET',
+            body, url=reverse('home'), method='GET',
             meta=onem.forms.FormMeta(
                 confirm=False, status=False, status_in_header=False
             )
